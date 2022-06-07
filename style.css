@@ -10,6 +10,6 @@
     transform: translate( -50%, -50%);
     border: 5px solid white;
 }
-#playerImage, #backgroundImage, #enemyEyeWorm, #enemySnail {
+#playerImage, #backgroundImage, #enemyWorm, #enemySnail {
     display: none;
 }
