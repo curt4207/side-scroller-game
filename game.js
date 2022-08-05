@@ -5,16 +5,19 @@ window.addEventListener("load", function(){
     const ctx = canvas.getContext("2d");
 
 // Change to fit any screen size with some padding because i like the border outline so it works better
-    canvas.width = 1200;
-    canvas.height = 700;
+    canvas.width = 1400;
+    canvas.height = 720;
 
     let enemies = [];
     let score = 0;
     let gameOver = false;
 
+// InputHandler    
     class InputHandler {
         constructor(){
             this.keys = [];
+            this.touchY = "";
+            this.touchThreshold = 30;
 //Key pressed down event            
             window.addEventListener("keydown", (event) => {
                 if(( event.key === "ArrowDown" || 
@@ -23,8 +26,9 @@ window.addEventListener("load", function(){
                      event.key == "ArrowRight") 
                      && this.keys.indexOf(event.key) === -1){
                     this.keys.push(event.key);
-                };
-                // (if indexOf = -1) that means that element is not present in the array 
+                // (if indexOf = -1) that means that element is not present in the array                     
+                } else if (event.key === "Enter" && gameOver) restartGame();
+               
             });
 
 // When the key is released/up 
@@ -37,7 +41,23 @@ window.addEventListener("load", function(){
                 }
                 // when a key is released if that key is ArrowDown find the index of that key inside this.keys array then splice to remove one element from the array 
             });
+            
+            window.addEventListener("touchstart", event => {
+                this.touchY = event.changedTouches[0].pageY; 
+            });
 
+            window.addEventListener("touchmove", event => {
+                const swipeDistance = event.changedTouches[0].pageY - this.touchY;
+                
+                if (swipeDistance < -this.touchThreshold && this.keys.indexOf("swipe up" )=== -1) this.keys.push("swipe up");
+                else if (swipeDistance > this.touchThreshold && this.keys.indexOf("swipe down") === -1) this.keys.push("swipe down");
+            });
+
+            window.addEventListener("touchend", event => {
+                console.log(this.keys);
+                this.keys.splice(this.keys.indexOf("swipe up"), 1);
+                this.keys.splice(this.keys.indexOf("swipe down"), 1);
+            });
         }
     };
     // Apply's Event Listener to keyboard events and will hold an Array of all active keys
@@ -49,7 +69,7 @@ window.addEventListener("load", function(){
             this.gameHeight = gameHeight;
             this.width = 200;
             this.height = 200;
-            this.x = 0;
+            this.x = 100;
             this.y = this.gameHeight - this.height;
             this.image = document.getElementById("playerImage");
             this.maxFrame = 8;
@@ -61,6 +81,12 @@ window.addEventListener("load", function(){
             this.speed = 0;
             this.velocityY = 0;
             this.gravity = 1;
+        }
+        restart(){
+            this.x = 100;
+            this.y = this.gameHeight -this.height;
+            this.maxFrame = 8;
+            this.frameY = 0;
         }
         draw(context){
             // context.strokeStyle = "white";
@@ -74,7 +100,7 @@ window.addEventListener("load", function(){
 
             context.drawImage(this.image, this.frameX * this.width, this.frameY * this.height, this.width, this.height, this.x, this.y, this.width, this.height);
             
-    //Above code meaning = context.drawImage(source image, source x position, source y position, source image width, source image height, destination x, destination y, destination width, destination height= to place the cropped out rectangle)
+    //Above code meaning = context.drawImage(source image, source x position, source y position, source image width, source image height, destination x, destination y, destination width, destination height= to place the cropped out rectangle)  
         };
   
         update(input, deltaTime, enemies){
@@ -82,10 +108,11 @@ window.addEventListener("load", function(){
             enemies.forEach(enemy =>{
                 const dx = (enemy.x + enemy.width/2) - (this.x + this.width/2);
                 const dy = (enemy.y + enemy.height/2) - (this.y + this.height/2);
-                const distance = Math.sqrt(dx * dx + dy *dy);
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
                 if(distance < enemy.width/2 + this.width/2){
                     gameOver = true;
-                }
+                }// make collision detection smaller add back color circles ring to check 
             })    
     // Sprite animation
             if(this.frameTimer > this.frameInterval){
@@ -150,6 +177,9 @@ window.addEventListener("load", function(){
             this.x -= this.speed;
             if(this.x < 0 - this.width) this.x = 0;
         }
+        restart(){
+            this.x = 0;
+        }
     };
     
 // Draw's and update's enemy
@@ -171,14 +201,15 @@ window.addEventListener("load", function(){
             this.markedForDeletion = false;
         }
         draw(context){
-            // context.strokeStyle = "white";
+            // context.strokeStyle = "yellow";
             // context.beginPath();
             // context.arc(this.x + this.width/2, this.y + this.height/2, this.width/2, 0, Math.PI * 2);
             // context.stroke();
-            // context.strokeStyle = "blue";
+            // context.strokeStyle = "red";
             // context.beginPath();
             // context.arc(this.x , this.y , this.width/2, 0, Math.PI * 2);
             // context.stroke();
+
             context.drawImage(this.image, this.frameX * this.width, 0, this.width, this.height, this.x, this.y, this.width, this.height);
         }
         update(deltaTime){
@@ -201,7 +232,7 @@ window.addEventListener("load", function(){
     function handleEnemies(deltaTime){
        if(enemyTimer > enemyInterval + randomEnemyInterval){
         enemies.push(new Enemy(canvas.width, canvas.height));
-        console.log(enemies)
+        // console.log(enemies)
         randomEnemyInterval = Math.random() * 1000 + 500;
         enemyTimer = 0;
        }else{
@@ -220,19 +251,29 @@ window.addEventListener("load", function(){
         context.shadowColor = "blue";
         context.shadowBlur = 15;
         context.fillStyle = "black";
-        context.font = "40px fantasy";
+        context.font = "3rem fantasy";
         context.fillText("Score: " + score, 20, 50);
         context.restore();
         if (gameOver){
             context.save();
-            context.shadowColor = "white";
+            context.shadowColor = "red";
             context.shadowBlur = 20;
             context.textAlign = "center";
             context.fillStyle = "black";
-            context.font = "25px fantasy";
-            context.fillText("Game Over, try again!",canvas.width/2, 200);
+            context.font = "2rem fantasy";
+            context.fillText("Game Over, try again! press Enter to restart!",canvas.width/2, 200);
             context.restore();
         }
+    };
+
+// Restart game function     
+    function restartGame(){
+        player.restart();
+        background.restart();
+        enemies = [];
+        score = 0;
+        gameOver = false;
+        animate(0);
     };
 
 // Instantiation - the creation of an object
@@ -256,7 +297,7 @@ window.addEventListener("load", function(){
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         background.draw(ctx);
-        // background.update();
+        background.update();
         player.draw(ctx);
         player.update(input, deltaTime, enemies);
         handleEnemies(deltaTime);
